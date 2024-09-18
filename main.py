@@ -3,7 +3,7 @@ import dearpygui.dearpygui as dpg
 import random
 import math
 
-MAX_LENGTH = 20
+MAX_LENGTH = 10
 INITIAL_TEMPERATURE = 100.0
 FINAL_TEMPERATURE = 0.5
 ALPHA = 0.99
@@ -80,19 +80,11 @@ def main():
         print(f"Temperature : {temperature}")
         accepted = 0
         for _ in range(STEPS_PER_CHANGE):
-            use_new = False
             tweak_solution(working)
             compute_energy(working)
-            if working.energy <= current.energy:
-                use_new = True
-            else:
-                test = get_srand()
-                delta = working.energy - current.energy
-                calc = math.exp(-delta / temperature)
-                if calc > test:
-                    accepted += 1
-                    use_new = True
-            if use_new:
+            delta = working.energy - current.energy
+            if delta <= 0 or math.exp(-delta / temperature) > get_srand():
+                accepted += 1 if delta > 0 else 0
                 copy_solution(current, working)
                 if current.energy < best.energy:
                     copy_solution(best, current)
