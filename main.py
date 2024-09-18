@@ -215,6 +215,8 @@ def main():
                     if rejected % 10 == 0:
                         bad_solutions_x.append(float(time.time() - start_time))
                         bad_solutions_y.append(rejected)
+                    if len(bad_solutions_x) > 0:
+                        dpg.set_value("bads_text", f"{rejected}")
             else:
                 copy_solution(working, current)
         # print(f"Best energy = {best.energy}")
@@ -239,7 +241,6 @@ def main():
             dpg.set_value("series_tag_bad", [bad_solutions_x, bad_solutions_y])
             dpg.fit_axis_data("x_axis_bad")
             dpg.set_axis_limits("y_axis_bad", -0.5, max(bad_solutions_y) + 0.5)
-            dpg.set_value("bads_text", f"{bad_solutions_y[-1]}")
         if len(temperature_x) > 0:
             dpg.set_value("time_text", f"{temperature_x[-1]:.2f}s")
 

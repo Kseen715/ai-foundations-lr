@@ -3,3 +3,5 @@
 *.exe
 *.dll
 solution.png
+*.wbk
+~*
