@@ -2,6 +2,10 @@
 *.so
 *.exe
 *.dll
-solution.png
 *.wbk
+*.bkp
+*.dtmp
+
 ~*
+
+solution.png
