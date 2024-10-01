@@ -11,7 +11,9 @@ CFLAGS = -c $(ERRORS) -fPIC -std=c11
 BUILD_DIR = build
 EXE_NAME = rcmnd
 SOURCES = $(wildcard *.c)
+SOURCES += $(wildcard *.cpp)
 HEADERS = $(wildcard *.h)
+HEADERS += $(wildcard *.hpp)
 C_INCLUDE_PATH = -I.
 C_LIBS =
 
