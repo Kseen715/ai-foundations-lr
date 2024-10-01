@@ -1,1 +1,4 @@
 pandas==2.2.2
+numpy==2.1.0
+colorama==0.4.6
+pyinstaller==6.10.0

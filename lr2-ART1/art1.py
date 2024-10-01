@@ -2,7 +2,8 @@
 # Python3.12
 
 import random
-import math
+import argparse
+import time
 
 import pandas as pd
 import colorama
@@ -10,12 +11,14 @@ import colorama
 CC = colorama.Fore.CYAN
 CG = colorama.Fore.GREEN
 CY = colorama.Fore.YELLOW
-CR = colorama.Style.RESET_ALL
+CR = colorama.Fore.RED
+C0 = colorama.Style.RESET_ALL
 
 MAX_ITEMS = 8
-MAX_CUSTOMERS = 5000
-TOTAL_PROTOTYPE_VECTORS = 10
+MAX_CUSTOMERS = 500
+TOTAL_PROTOTYPE_VECTORS = 5
 
+# Beta is a user-defined parameter that controls the degree of overlap
 beta = 1.0
 vigilance = 0.9
 
@@ -29,27 +32,48 @@ membership = [-1] * MAX_CUSTOMERS
 # Отток банковских клиентов - покинул банк / остался, основываясь на
 # различных признаках
 
-# read file data/bank_churn_dataset/train.csv
-data = pd.read_csv('data/bank_churn_dataset/test.csv')
 
-data['Balance'] = data['Balance'].\
-    apply(lambda x: 0 if x == 0 else 1)
-data['NumOfProducts'] = data['NumOfProducts'].\
-    apply(lambda x: 0 if x == 1 else 1)
-data['IsActiveMember'] = data['IsActiveMember'].\
-    apply(lambda x: 0 if x == 0 else 1)
-data['Age_bin'] = data['Age_bin'].\
-    apply(lambda x: 0 if x < 2 else 1)
+def initialize(file, shuffle=False):
+    global prototype_vector, sum_vector, members, membership, data, \
+        item_name, database, MAX_ITEMS
 
+    # read file data/bank_churn_dataset/train.csv
+    data = pd.read_csv(file)
 
-item_name = data.columns.tolist()
+    # if filename is bank_churn_dataset/train.csv
+    # then we need to preprocess data
+    if "bank_churn_dataset/train.csv" in file.replace("\\", "/"):
+        data['Balance'] = data['Balance'].apply(lambda x: 0 if x == 0 else 1)
+        data['NumOfProducts'] = data['NumOfProducts'].apply(
+            lambda x: 0 if x == 1 else 1)
+        data['IsActiveMember'] = data['IsActiveMember'].apply(
+            lambda x: 0 if x == 0 else 1)
+        data['Age_bin'] = data['Age_bin'].apply(lambda x: 0 if x < 2 else 1)
+        data.drop(['Exited'], axis=1, inplace=True)
+    elif "bank_churn_dataset/test.csv" in file.replace("\\", "/"):
+        data['Balance'] = data['Balance'].apply(lambda x: 0 if x == 0 else 1)
+        data['NumOfProducts'] = data['NumOfProducts'].apply(
+            lambda x: 0 if x == 1 else 1)
+        data['IsActiveMember'] = data['IsActiveMember'].apply(
+            lambda x: 0 if x == 0 else 1)
+        data['Age_bin'] = data['Age_bin'].apply(lambda x: 0 if x < 2 else 1)
 
+    if shuffle:
+        data = data.sample(frac=1).reset_index(drop=True)
 
-database = data.values.tolist()
+    item_name = data.columns.tolist()
+    database = data.values.tolist()
 
+    # check if database has enough columns to fullfill MAX_ITEMS
+    if MAX_ITEMS is None:
+        MAX_ITEMS = len(item_name)
+    elif len(item_name) < MAX_ITEMS:
+        raise AssertionError(f"{CR}Database has only {len(item_name)} columns, "
+                             f"but {MAX_ITEMS} are required{C0}")
+    if MAX_CUSTOMERS > len(database):
+        raise AssertionError(f"{CR}Database has only {len(database)} lines, "
+                             f"but {MAX_CUSTOMERS} are required{C0}")
 
-def initialize():
-    global prototype_vector, sum_vector, members, membership
     prototype_vector = [
         [0] * MAX_ITEMS for _ in range(TOTAL_PROTOTYPE_VECTORS)]
     sum_vector = [[0] * MAX_ITEMS for _ in range(TOTAL_PROTOTYPE_VECTORS)]
@@ -69,6 +93,17 @@ def vector_bitwise_and(v, w):
 
 
 def create_new_prototype_vector(example):
+    """Create new prototype vector from example
+
+    Args:
+        example (list): list of items
+
+    Raises:
+        AssertionError: No available cluster
+
+    Returns:
+        int: cluster
+    """
     global num_prototype_vectors
     for cluster in range(TOTAL_PROTOTYPE_VECTORS):
         if members[cluster] == 0:
@@ -103,8 +138,12 @@ def update_prototype_vectors(cluster):
                     sum_vector[cluster][item] += database[customer][item]
 
 
+time_to_calculate = 0
+
+
 def perform_clustering():
-    global membership, members, num_prototype_vectors
+    global membership, members, num_prototype_vectors, time_to_calculate
+    start = time.time()
     andresult = [0] * MAX_ITEMS
     done = False
     count = 50  # Maximum number of iterations to prevent infinite loops
@@ -151,15 +190,18 @@ def perform_clustering():
             break
         count -= 1
 
+    time_to_calculate = time.time() - start
+
 
 def display_clusters():
-    print(f"\n{CC}Total Members{CR}: {MAX_CUSTOMERS}")
-    print(f"{CC}Total Prototype Vectors{CR}: {num_prototype_vectors}")
-    print(f"{CC}Total Clusters{CR}: {TOTAL_PROTOTYPE_VECTORS}")
-    print(f"{CC}Vigilance{CR}: {vigilance}")
-    print(f"{CC}Beta{CR}: {beta}")
-    print(f"{CC}Database size{CR}: {len(database)} lines")
-    print(f"{CC}Database head{CR}:")
+    print(f"\n{CC}Total Members{C0}: {MAX_CUSTOMERS}")
+    print(f"{CC}Total Prototype Vectors{C0}: {TOTAL_PROTOTYPE_VECTORS}")
+    print(f"{CC}Num Prototype Vectors{C0}: {num_prototype_vectors}")
+    print(f"{CC}Vector Size{C0}: {MAX_ITEMS}")
+    print(f"{CC}Vigilance{C0}: {vigilance}")
+    print(f"{CC}Beta{C0}: {beta}")
+    print(f"{CC}Database size{C0}: {len(database)} lines")
+    print(f"{CC}Database HEAD{C0}:")
     print(data.head())
 
     clusters = {}
@@ -173,18 +215,67 @@ def display_clusters():
     clusters = dict(sorted(clusters.items(), key=lambda x: len(x[1]),
                            reverse=True))
 
+    i = 0
     for cluster, members in clusters.items():
+        str_PV = ''
+        if len(prototype_vector[cluster]) > 50:
+            # convert all values to hex string as bits
+            str_PV = ''.join([f"{x:01d}" for x in prototype_vector[cluster]])
+            str_PV = f'{hex(int(str_PV, 2))}'
+        else:
+            str_PV = f"{prototype_vector[cluster]}"
+
+
         print()
-        print(f"{CC}Cluster{CR} {cluster}, {CC}PV{
-              CR} {prototype_vector[cluster]}:")
-        print(f" \\ {CG}Members{CR}: ({len(members)}){(
-            members if len(members) < 200 else
-            f" {CY}>200, not displaying{CR}") if members else "None"}")
+        print(f"{CC}Cluster{C0} {i + 1}, {CC}PV{
+              C0} ({len(prototype_vector[cluster])}){str_PV}:")
+        i += 1
+        limit = 200
+        print(f" \\ {CG}Members{C0}: ({len(members)}){(
+            members if len(members) < limit else
+            f" {CY}>{limit}, not displaying{C0}") if members else "None"}")
+
+    print(f"\n{CC}Time to calculate{C0}: {time_to_calculate:.6f} seconds")
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-b", "--beta", type=float,
+                        help="Set beta value")
+    parser.add_argument("-v", "--vigilance", type=float,
+                        help="Set vigilance value")
+    parser.add_argument("-m", "--max-customers", type=int,
+                        help="Set max customers")
+    parser.add_argument("-i", "--max-items", type=int, default=None,
+                        help="Set max items, if None, all items will be used")
+    parser.add_argument("-p", "--total-prototype-vectors", type=int,
+                        help="Set total prototype vectors")
+    parser.add_argument("-f", "--file", type=str, default=None,
+                        help="Set file path to read data from")
+    parser.add_argument("-s", "--shuffle", action="store_true",
+                        help="Shuffle data")
+    args = parser.parse_args()
+
+    if args.beta is None or args.vigilance is None \
+        or args.max_customers is None or args.total_prototype_vectors is None \
+            or args.file is None:
+        parser.print_help()
+        return
+
+    if args.max_customers < 1:
+        raise AssertionError("Max customers must be greater than 0")
+    if args.total_prototype_vectors < 1:
+        raise AssertionError("Total prototype vectors must be greater than 0")
+
+    global beta, vigilance, MAX_CUSTOMERS, MAX_ITEMS, TOTAL_PROTOTYPE_VECTORS
+    beta = args.beta
+    vigilance = args.vigilance
+    MAX_CUSTOMERS = args.max_customers
+    MAX_ITEMS = args.max_items
+    TOTAL_PROTOTYPE_VECTORS = args.total_prototype_vectors
+
     random.seed()
-    initialize()
+    initialize(args.file, args.shuffle)
     perform_clustering()
     display_clusters()
 

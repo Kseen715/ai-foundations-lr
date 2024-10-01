@@ -6,7 +6,11 @@
 *.bkp
 *.dtmp
 *.obj
+*.spec
 
 ~*
 
 solution.png
+build/
+dist/
+venv/
