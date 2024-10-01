@@ -14,23 +14,25 @@ CY = colorama.Fore.YELLOW
 CR = colorama.Fore.RED
 C0 = colorama.Style.RESET_ALL
 
-MAX_ITEMS = 8
-MAX_CUSTOMERS = 500
-TOTAL_PROTOTYPE_VECTORS = 5
+# Maximum number of items in a vector
+MAX_ITEMS = 8  # WILL BE OVERWRITTEN
+# Maximum number of customers
+MAX_CUSTOMERS = 500  # WILL BE OVERWRITTEN
+TOTAL_PROTOTYPE_VECTORS = 5  # WILL BE OVERWRITTEN
 
 # Beta is a user-defined parameter that controls the degree of overlap
-beta = 1.0
-vigilance = 0.9
+beta = 1.0  # WILL BE OVERWRITTEN
+# Vigilance is a user-defined parameter that controls the degree of
+# similarity between a prototype vector and an input vector
+vigilance = 0.9  # WILL BE OVERWRITTEN
 
+# Number of prototype vectors created so far
 num_prototype_vectors = 0
 
 prototype_vector = [[0] * MAX_ITEMS for _ in range(TOTAL_PROTOTYPE_VECTORS)]
 sum_vector = [[0] * MAX_ITEMS for _ in range(TOTAL_PROTOTYPE_VECTORS)]
 members = [0] * TOTAL_PROTOTYPE_VECTORS
 membership = [-1] * MAX_CUSTOMERS
-
-# Отток банковских клиентов - покинул банк / остался, основываясь на
-# различных признаках
 
 
 def initialize(file, shuffle=False):
@@ -224,7 +226,6 @@ def display_clusters():
             str_PV = f'{hex(int(str_PV, 2))}'
         else:
             str_PV = f"{prototype_vector[cluster]}"
-
 
         print()
         print(f"{CC}Cluster{C0} {i + 1}, {CC}PV{
