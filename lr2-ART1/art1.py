@@ -5,7 +5,7 @@ import random
 import math
 import pandas as pd
 
-MAX_ITEMS = 11
+MAX_ITEMS = 8
 MAX_CUSTOMERS = 10
 TOTAL_PROTOTYPE_VECTORS = 5
 
@@ -19,24 +19,50 @@ sum_vector = [[0] * MAX_ITEMS for _ in range(TOTAL_PROTOTYPE_VECTORS)]
 members = [0] * TOTAL_PROTOTYPE_VECTORS
 membership = [-1] * MAX_CUSTOMERS
 
-item_name = [
-    "Hammer", "Paper", "Snickers", "Screwdriver", 
-    "Pen", "Kit-Kat", "Wrench", "Pencil", 
-    "Heath-Bar", "Tape-Measure", "Binder"
-]
+# item_name = [
+#     "Hammer", "Paper", "Snickers", "Screwdriver", 
+#     "Pen", "Kit-Kat", "Wrench", "Pencil", 
+#     "Heath-Bar", "Tape-Measure", "Binder"
+# ]
 
-database = [
-    [0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0],
-    [0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1],
-    [0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0],
-    [0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1],
-    [1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0],
-    [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0],
-    [0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0],
-    [0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0]
-]
+# Отток банковских клиентов да/нет
+# read file data/bank_churn_dataset/train.csv
+data = pd.read_csv('data/bank_churn_dataset/test.csv')
+
+data['Balance'] = data['Balance'].\
+    apply(lambda x: 0 if x == 0 else 1)
+data['NumOfProducts'] = data['NumOfProducts'].\
+    apply(lambda x: 0 if x == 1 else 1)
+data['IsActiveMember'] = data['IsActiveMember'].\
+    apply(lambda x: 0 if x == 0 else 1)
+data['Age_bin'] = data['Age_bin'].\
+    apply(lambda x: 0 if x < 2 else 1)
+# drop column 'Exited'
+# data = data.drop(['Exited'], axis=1)
+
+
+print(data.head())
+
+item_name = data.columns.tolist()
+print(item_name)
+
+database = data.values.tolist()
+# print(database)
+
+# exit(1)
+
+# database = [
+#     [0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0],
+#     [0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1],
+#     [0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0],
+#     [0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1],
+#     [1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0],
+#     [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1],
+#     [1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+#     [0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0],
+#     [0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0],
+#     [0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0]
+# ]
 
 def display_customer_database():
     print("\n")
