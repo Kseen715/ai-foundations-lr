@@ -3,11 +3,18 @@
 
 import random
 import math
+
 import pandas as pd
+import colorama
+
+CC = colorama.Fore.CYAN
+CG = colorama.Fore.GREEN
+CY = colorama.Fore.YELLOW
+CR = colorama.Style.RESET_ALL
 
 MAX_ITEMS = 8
-MAX_CUSTOMERS = 10
-TOTAL_PROTOTYPE_VECTORS = 5
+MAX_CUSTOMERS = 5000
+TOTAL_PROTOTYPE_VECTORS = 10
 
 beta = 1.0
 vigilance = 0.9
@@ -19,13 +26,9 @@ sum_vector = [[0] * MAX_ITEMS for _ in range(TOTAL_PROTOTYPE_VECTORS)]
 members = [0] * TOTAL_PROTOTYPE_VECTORS
 membership = [-1] * MAX_CUSTOMERS
 
-# item_name = [
-#     "Hammer", "Paper", "Snickers", "Screwdriver", 
-#     "Pen", "Kit-Kat", "Wrench", "Pencil", 
-#     "Heath-Bar", "Tape-Measure", "Binder"
-# ]
+# Отток банковских клиентов - покинул банк / остался, основываясь на
+# различных признаках
 
-# Отток банковских клиентов да/нет
 # read file data/bank_churn_dataset/train.csv
 data = pd.read_csv('data/bank_churn_dataset/test.csv')
 
@@ -37,62 +40,33 @@ data['IsActiveMember'] = data['IsActiveMember'].\
     apply(lambda x: 0 if x == 0 else 1)
 data['Age_bin'] = data['Age_bin'].\
     apply(lambda x: 0 if x < 2 else 1)
-# drop column 'Exited'
-# data = data.drop(['Exited'], axis=1)
 
-
-print(data.head())
 
 item_name = data.columns.tolist()
-print(item_name)
+
 
 database = data.values.tolist()
-# print(database)
 
-# exit(1)
-
-# database = [
-#     [0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0],
-#     [0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1],
-#     [0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0],
-#     [0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1],
-#     [1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0],
-#     [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1],
-#     [1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
-#     [0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0],
-#     [0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0],
-#     [0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0]
-# ]
-
-def display_customer_database():
-    print("\n")
-    for cluster in range(TOTAL_PROTOTYPE_VECTORS):
-        print(f"ProtoVector {cluster:2d} : ", end="")
-        for item in range(MAX_ITEMS):
-            print(f"{prototype_vector[cluster][item]:1d} ", end="")
-        print("\n\n")
-        for customer in range(MAX_CUSTOMERS):
-            if membership[customer] == cluster:
-                print(f"Customer {customer:2d}    : ", end="")
-                for item in range(MAX_ITEMS):
-                    print(f"{database[customer][item]:1d} ", end="")
-                print(f"  : {membership[customer]} : \n")
-        print("\n")
-    print("\n")
 
 def initialize():
     global prototype_vector, sum_vector, members, membership
-    prototype_vector = [[0] * MAX_ITEMS for _ in range(TOTAL_PROTOTYPE_VECTORS)]
+    prototype_vector = [
+        [0] * MAX_ITEMS for _ in range(TOTAL_PROTOTYPE_VECTORS)]
     sum_vector = [[0] * MAX_ITEMS for _ in range(TOTAL_PROTOTYPE_VECTORS)]
     members = [0] * TOTAL_PROTOTYPE_VECTORS
     membership = [-1] * MAX_CUSTOMERS
 
+
 def vector_magnitude(vector):
     return sum(vector)
 
-def vector_bitwise_and(result, v, w):
+
+def vector_bitwise_and(v, w):
+    result = []
     for i in range(MAX_ITEMS):
-        result[i] = v[i] and w[i]
+        result.append(v[i] and w[i])
+    return result
+
 
 def create_new_prototype_vector(example):
     global num_prototype_vectors
@@ -106,6 +80,7 @@ def create_new_prototype_vector(example):
         prototype_vector[cluster][i] = example[i]
     members[cluster] = 1
     return cluster
+
 
 def update_prototype_vectors(cluster):
     assert cluster >= 0
@@ -122,73 +97,97 @@ def update_prototype_vectors(cluster):
                 first = False
             else:
                 for item in range(MAX_ITEMS):
-                    prototype_vector[cluster][item] = prototype_vector[cluster][item] and database[customer][item]
+                    prototype_vector[cluster][item] = \
+                        prototype_vector[cluster][item] \
+                        and database[customer][item]
                     sum_vector[cluster][item] += database[customer][item]
 
-def perform_art1():
+
+def perform_clustering():
     global membership, members, num_prototype_vectors
     andresult = [0] * MAX_ITEMS
     done = False
-    count = 50
+    count = 50  # Maximum number of iterations to prevent infinite loops
+
     while not done:
         done = True
         for index in range(MAX_CUSTOMERS):
+            best_cluster = -1
+            best_similarity = -1
+
             for pvec in range(TOTAL_PROTOTYPE_VECTORS):
                 if members[pvec]:
-                    vector_bitwise_and(andresult, database[index], prototype_vector[pvec])
+                    andresult = vector_bitwise_and(
+                        database[index], prototype_vector[pvec])
                     magPE = vector_magnitude(andresult)
                     magP = vector_magnitude(prototype_vector[pvec])
                     magE = vector_magnitude(database[index])
-                    result = magPE / (beta + magP)
-                    test = magE / (beta + MAX_ITEMS)
-                    if result > test:
-                        if magPE / magE < vigilance:
-                            old = membership[index]
-                            if membership[index] != pvec:
-                                membership[index] = pvec
-                                if old >= 0:
-                                    members[old] -= 1
-                                    if members[old] == 0:
-                                        num_prototype_vectors -= 1
-                                members[pvec] += 1
-                                if old >= 0 and old < TOTAL_PROTOTYPE_VECTORS:
-                                    update_prototype_vectors(old)
-                                update_prototype_vectors(pvec)
-                                done = False
-                                break
-            if membership[index] == -1:
-                membership[index] = create_new_prototype_vector(database[index])
+                    similarity = magPE / (beta + magP)
+                    threshold = magE / (beta + MAX_ITEMS)
+
+                    if similarity > threshold and similarity > best_similarity:
+                        best_similarity = similarity
+                        best_cluster = pvec
+
+            if best_cluster != -1 and (membership[index] != best_cluster):
+                old_cluster = membership[index]
+                membership[index] = best_cluster
+                if old_cluster >= 0:
+                    members[old_cluster] -= 1
+                    if members[old_cluster] == 0:
+                        num_prototype_vectors -= 1
+                members[best_cluster] += 1
+                if old_cluster >= 0 and old_cluster < TOTAL_PROTOTYPE_VECTORS:
+                    update_prototype_vectors(old_cluster)
+                update_prototype_vectors(best_cluster)
                 done = False
+
+            if membership[index] == -1:
+                membership[index] = create_new_prototype_vector(
+                    database[index])
+                done = False
+
         if not count:
             break
         count -= 1
 
-def make_recommendation(customer):
-    best_item = -1
-    val = 0
-    for item in range(MAX_ITEMS):
-        if database[customer][item] == 0 and sum_vector[membership[customer]][item] > val:
-            best_item = item
-            val = sum_vector[membership[customer]][item]
-    print(f"For Customer {customer}, ", end="")
-    if best_item >= 0:
-        print(f"The best recommendation is {best_item} ({item_name[best_item]})")
-        print(f"Owned by {sum_vector[membership[customer]][best_item]} out of {members[membership[customer]]} members of this cluster")
-    else:
-        print("No recommendation can be made.")
-    print("Already owns: ", end="")
-    for item in range(MAX_ITEMS):
-        if database[customer][item]:
-            print(f"{item_name[item]} ", end="")
-    print("\n")
+
+def display_clusters():
+    print(f"\n{CC}Total Members{CR}: {MAX_CUSTOMERS}")
+    print(f"{CC}Total Prototype Vectors{CR}: {num_prototype_vectors}")
+    print(f"{CC}Total Clusters{CR}: {TOTAL_PROTOTYPE_VECTORS}")
+    print(f"{CC}Vigilance{CR}: {vigilance}")
+    print(f"{CC}Beta{CR}: {beta}")
+    print(f"{CC}Database size{CR}: {len(database)} lines")
+    print(f"{CC}Database head{CR}:")
+    print(data.head())
+
+    clusters = {}
+    for customer in range(MAX_CUSTOMERS):
+        cluster = membership[customer]
+        if cluster not in clusters:
+            clusters[cluster] = []
+        clusters[cluster].append(customer)
+
+    # sort clusters by members count
+    clusters = dict(sorted(clusters.items(), key=lambda x: len(x[1]),
+                           reverse=True))
+
+    for cluster, members in clusters.items():
+        print()
+        print(f"{CC}Cluster{CR} {cluster}, {CC}PV{
+              CR} {prototype_vector[cluster]}:")
+        print(f" \\ {CG}Members{CR}: ({len(members)}){(
+            members if len(members) < 200 else
+            f" {CY}>200, not displaying{CR}") if members else "None"}")
+
 
 def main():
     random.seed()
     initialize()
-    perform_art1()
-    display_customer_database()
-    for customer in range(MAX_CUSTOMERS):
-        make_recommendation(customer)
+    perform_clustering()
+    display_clusters()
+
 
 if __name__ == "__main__":
     main()
