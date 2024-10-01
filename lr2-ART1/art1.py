@@ -1,5 +1,9 @@
+#!/usr/bin/env python3
+# Python3.12
+
 import random
 import math
+import pandas as pd
 
 MAX_ITEMS = 11
 MAX_CUSTOMERS = 10

@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # Python 3.12
 
 from PIL import Image, ImageDraw, ImageFont
