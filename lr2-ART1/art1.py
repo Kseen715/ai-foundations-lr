@@ -206,6 +206,8 @@ def display_clusters():
     print(f"{CC}Database HEAD{C0}:")
     print(data.head())
 
+    columns = data.columns.tolist()
+
     clusters = {}
     for customer in range(MAX_CUSTOMERS):
         cluster = membership[customer]
@@ -220,7 +222,12 @@ def display_clusters():
     i = 0
     for cluster, members in clusters.items():
         str_PV = ''
-        if len(prototype_vector[cluster]) > 50:
+        
+        if prototype_vector[cluster].count(1) <= 10:
+            # print full names, where 1
+            str_PV = ''.join([f"\"{columns[i]}\"," for i, x in enumerate(
+                prototype_vector[cluster]) if x]).strip(',')
+        elif len(prototype_vector[cluster]) > 50:
             # convert all values to hex string as bits
             str_PV = ''.join([f"{x:01d}" for x in prototype_vector[cluster]])
             str_PV = f'{hex(int(str_PV, 2))}'

@@ -3,6 +3,7 @@
 *.exe
 *.dll
 *.wbk
+*.tmp
 *.bkp
 *.dtmp
 *.obj
