@@ -11,7 +11,9 @@ CFLAGS = -c $(ERRORS) -fPIC -std=c11
 BUILD_DIR = build
 EXE_NAME = rcmnd
 SOURCES = $(wildcard *.c)
+SOURCES += $(wildcard *.cpp)
 HEADERS = $(wildcard *.h)
+HEADERS += $(wildcard *.hpp)
 C_INCLUDE_PATH = -I.
 C_LIBS =
 
@@ -23,7 +25,7 @@ TARGET = linux
 endif
 
 ifeq ($(TARGET),windows)
-RM = rm
+RM = rm -Recurse -Force
 COPY = copy
 SYS_FLAGS = -D _WIN32
 EXE_EXTENSION = .exe
@@ -32,6 +34,7 @@ OBJECT_EXTENSION = .obj
 ECHO = @echo
 SYS_MSG = "Windows_NT detected!"
 C_LIBS +=
+VENV_PATH = venv/Scripts
 else
 RM = rm -rf
 COPY = cp
@@ -42,17 +45,32 @@ OBJECT_EXTENSION = .o
 ECHO = @echo
 SYS_MSG = "Linux detected!"
 C_LIBS +=
+VENV_PATH = venv/bin
 endif
 
+all: build_python
 
-build: build_dir platform $(SOURCES)
+# Cursed:
+build_python: platform install_pips
+	$(ECHO) "Building python executable..."
+	${VENV_PATH}/pyinstaller --onefile --clean --noconfirm --optimize 2 --name $(EXE_NAME) --distpath ${BUILD_DIR} --specpath ${BUILD_DIR} art1.py
+
+install_pips: venv
+	$(ECHO) "Installing required python packages..."
+	${VENV_PATH}/pip install -r requirements.txt
+
+venv: platform
+	$(ECHO) "Checking for virtual environment..."
+	@if not exist venv python -m venv venv
+	${VENV_PATH}/python -m pip install --upgrade pip
+
+build_cpp: build_dir platform $(SOURCES)
 # Compile the sources
 	$(CC) $(CFLAGS) $(C_INCLUDE_PATH) $(SYS_FLAGS) $(SOURCES) -o $(BUILD_DIR)/$(EXE_NAME)$(OBJECT_EXTENSION) $(C_LIBS)
 # Link the object files
 	$(CC) $(BUILD_DIR)/$(EXE_NAME)$(OBJECT_EXTENSION) -o $(BUILD_DIR)/$(EXE_NAME)$(EXE_EXTENSION) $(C_LIBS)
 
-
-run: build
+run_cpp: build_cpp
 	$(BUILD_DIR)/$(EXE_NAME)$(EXE_EXTENSION)
 
 build_dir:
