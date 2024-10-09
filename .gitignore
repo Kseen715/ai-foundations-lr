@@ -15,3 +15,4 @@ solution.png
 build/
 dist/
 venv/
+out/
