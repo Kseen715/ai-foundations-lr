@@ -7,6 +7,8 @@ import random
 import math
 from pprint import pprint
 from tabulate import tabulate
+from matplotlib import pyplot as plt
+import networkx as nx
 
 # Constants
 MAX_CITIES = 20
@@ -165,6 +167,8 @@ def emitDataFile(cities, ants, ant_index):
         fp.write(f"{cities[ants[ant_index].path[0]].x} {
                  cities[ants[ant_index].path[0]].y}\n")
 
+from matplotlib.backends.backend_agg import FigureCanvasAgg
+from PIL import Image
 
 def main():
     # max_cities = int(input("Enter the number of cities: "))
@@ -211,9 +215,38 @@ def main():
             if curTime != max_time:
                 best, bestIndex = restartAnts(
                     ants, best, bestIndex, max_cities)
-            # if curTime % 10 == 0:
-                # rounded_pheromone = [[round(cell, 2) for cell in row] for row in pheromone]
-                # print(tabulate(rounded_pheromone, tablefmt="grid"))
+            if curTime % 10 == 0:
+                # plot the pheromone matrix as networkx graph
+                G = nx.random_geometric_graph(max_cities, radius=0.4, seed=69)
+                pos = nx.get_node_attributes(G, "pos")
+                # resize plot
+                fig = plt.figure()
+                for i in range(max_cities):
+                    G.add_node(i)
+                for i in range(max_cities):
+                    for j in range(i + 1, max_cities):
+                        G.add_edge(i, j, weight=pheromone[i][j])
+
+                # Extract weights
+                weights = [G[u][v]['weight'] for u, v in G.edges()]
+
+
+                # Draw the graph with weights as edge widths
+                nx.draw(G, pos, with_labels=True, width=weights)
+
+                # pixels = plt.gcf().canvas.get_renderer().buffer_rgba()
+                # save pixels
+                # save_bmp(pixels, 800, 800, "out/antalg.bmp")
+                canvas = FigureCanvasAgg(fig)
+                canvas.draw()
+
+                width, height = fig.get_size_inches() * fig.get_dpi()
+                pixel_data = canvas.buffer_rgba() # r, g, b, a
+
+                # Save the image to a file
+                image = Image.frombytes("RGBA", (int(width), int(height)), pixel_data)
+                image.save("out/antalg.png")
+
             print(f"Time is {curTime} ({best})")
 
     print(f"Best tour length: {best}")
