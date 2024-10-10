@@ -5,18 +5,13 @@
 import os
 import random
 import math
+from pprint import pprint
+from tabulate import tabulate
 
 # Constants
 MAX_CITIES = 20
-MAX_ANTS = 10
 MAX_DISTANCE = 100
-INIT_PHEROMONE = 1.0
-ALPHA = 1.0
-BETA = 2.0
-RHO = 0.5
-QVAL = 100
-MAX_TOUR = float('inf')
-MAX_TIME = 1000
+INIT_PHEROMONE = 0
 
 # Data structures
 
@@ -28,21 +23,13 @@ class City:
 
 
 class Ant:
-    def __init__(self):
+    def __init__(self, max_cities):
         self.curCity = 0
         self.nextCity = -1
         self.tourLength = 0.0
-        self.path = [-1] * MAX_CITIES
+        self.path = [-1] * max_cities
         self.pathIndex = 0
-        self.tabu = [0] * MAX_CITIES
-
-
-cities = [City() for _ in range(MAX_CITIES)]
-ants = [Ant() for _ in range(MAX_ANTS)]
-distance = [[0.0] * MAX_CITIES for _ in range(MAX_CITIES)]
-pheromone = [[INIT_PHEROMONE] * MAX_CITIES for _ in range(MAX_CITIES)]
-best = MAX_TOUR
-bestIndex = 0
+        self.tabu = [0] * max_cities
 
 
 def getRand(max_value):
@@ -53,20 +40,16 @@ def getSRand():
     return random.random()
 
 
-def init():
-    global best, bestIndex
-    best = MAX_TOUR
-    bestIndex = 0
-
-    for from_city in range(MAX_CITIES):
-        cities[from_city].x = getRand(MAX_DISTANCE)
-        cities[from_city].y = getRand(MAX_DISTANCE)
-        for to_city in range(MAX_CITIES):
+def init(cities, ants, distance, pheromone, max_cities, max_distance, init_pheromone):
+    for from_city in range(max_cities):
+        cities[from_city].x = getRand(max_distance)
+        cities[from_city].y = getRand(max_distance)
+        for to_city in range(max_cities):
             distance[from_city][to_city] = 0.0
-            pheromone[from_city][to_city] = INIT_PHEROMONE
+            pheromone[from_city][to_city] = init_pheromone
 
-    for from_city in range(MAX_CITIES):
-        for to_city in range(MAX_CITIES):
+    for from_city in range(max_cities):
+        for to_city in range(max_cities):
             if from_city != to_city and distance[from_city][to_city] == 0.0:
                 xd = abs(cities[from_city].x - cities[to_city].x)
                 yd = abs(cities[from_city].y - cities[to_city].y)
@@ -75,21 +58,20 @@ def init():
 
     to_city = 0
     for ant in ants:
-        if to_city == MAX_CITIES:
+        if to_city == max_cities:
             to_city = 0
         ant.curCity = to_city
         to_city += 1
-        ant.path = [-1] * MAX_CITIES
+        ant.path = [-1] * max_cities
         ant.pathIndex = 1
         ant.path[0] = ant.curCity
         ant.nextCity = -1
         ant.tourLength = 0.0
-        ant.tabu = [0] * MAX_CITIES
+        ant.tabu = [0] * max_cities
         ant.tabu[ant.curCity] = 1
 
 
-def restartAnts():
-    global best, bestIndex
+def restartAnts(ants, best, bestIndex, max_cities):
     to_city = 0
     for ant in ants:
         if ant.tourLength < best:
@@ -97,78 +79,82 @@ def restartAnts():
             bestIndex = ants.index(ant)
         ant.nextCity = -1
         ant.tourLength = 0.0
-        ant.path = [-1] * MAX_CITIES
+        ant.path = [-1] * max_cities
         ant.pathIndex = 1
-        if to_city == MAX_CITIES:
+        if to_city == max_cities:
             to_city = 0
         ant.curCity = to_city
         to_city += 1
         ant.path[0] = ant.curCity
-        ant.tabu = [0] * MAX_CITIES
+        ant.tabu = [0] * max_cities
         ant.tabu[ant.curCity] = 1
+    return best, bestIndex
 
 
-def antProduct(from_city, to_city):
-    return (pheromone[from_city][to_city] ** ALPHA) * ((1.0 / distance[from_city][to_city]) ** BETA)
+def antProduct(from_city, to_city, pheromone, distance, alpha, beta):
+    return (pheromone[from_city][to_city] ** alpha) * ((1.0 / distance[from_city][to_city]) ** beta)
 
 
-def selectNextCity(ant_index):
+def selectNextCity(ant_index, ants, pheromone, distance, alpha, beta, max_cities):
     from_city = ants[ant_index].curCity
-    denom = sum(antProduct(from_city, to_city) for to_city in range(
-        MAX_CITIES) if ants[ant_index].tabu[to_city] == 0)
+    denom = sum(antProduct(from_city, to_city, pheromone, distance, alpha, beta)
+                for to_city in range(max_cities) if ants[ant_index].tabu[to_city] == 0)
     assert denom != 0.0
 
     while True:
-        to_city = random.randint(0, MAX_CITIES - 1)
+        to_city = random.randint(0, max_cities - 1)
         if ants[ant_index].tabu[to_city] == 0:
-            p = antProduct(from_city, to_city) / denom
+            p = antProduct(from_city, to_city, pheromone,
+                           distance, alpha, beta) / denom
             if getSRand() < p:
                 break
     return to_city
 
 
-def simulateAnts():
+def simulateAnts(ants, pheromone, distance, alpha, beta, max_cities):
     moving = 0
-    for k in range(MAX_ANTS):
-        if ants[k].pathIndex < MAX_CITIES:
-            ants[k].nextCity = selectNextCity(k)
+    for k in range(len(ants)):
+        if ants[k].pathIndex < max_cities:
+            ants[k].nextCity = selectNextCity(
+                k, ants, pheromone, distance, alpha, beta, max_cities)
             ants[k].tabu[ants[k].nextCity] = 1
             ants[k].path[ants[k].pathIndex] = ants[k].nextCity
             ants[k].pathIndex += 1
             ants[k].tourLength += distance[ants[k].curCity][ants[k].nextCity]
-            if ants[k].pathIndex == MAX_CITIES:
-                ants[k].tourLength += distance[ants[k].path[MAX_CITIES - 1]
+            if ants[k].pathIndex == max_cities:
+                ants[k].tourLength += distance[ants[k].path[max_cities - 1]
                                                ][ants[k].path[0]]
             ants[k].curCity = ants[k].nextCity
             moving += 1
     return moving
 
 
-def updateTrails():
-    for from_city in range(MAX_CITIES):
-        for to_city in range(MAX_CITIES):
+def updateTrails(ants, pheromone, distance, rho, qval, max_cities):
+    global INIT_PHEROMONE
+    for from_city in range(max_cities):
+        for to_city in range(max_cities):
             if from_city != to_city:
-                pheromone[from_city][to_city] *= (1.0 - RHO)
+                pheromone[from_city][to_city] *= (1.0 - rho)
                 if pheromone[from_city][to_city] < 0.0:
                     pheromone[from_city][to_city] = INIT_PHEROMONE
 
     for ant in ants:
-        for i in range(MAX_CITIES):
-            if i < MAX_CITIES - 1:
+        for i in range(max_cities):
+            if i < max_cities - 1:
                 from_city = ant.path[i]
                 to_city = ant.path[i + 1]
             else:
                 from_city = ant.path[i]
                 to_city = ant.path[0]
-            pheromone[from_city][to_city] += (QVAL / ant.tourLength)
+            pheromone[from_city][to_city] += (qval / ant.tourLength)
             pheromone[to_city][from_city] = pheromone[from_city][to_city]
 
-    for from_city in range(MAX_CITIES):
-        for to_city in range(MAX_CITIES):
-            pheromone[from_city][to_city] *= RHO
+    for from_city in range(max_cities):
+        for to_city in range(max_cities):
+            pheromone[from_city][to_city] *= rho
 
 
-def emitDataFile(ant_index):
+def emitDataFile(cities, ants, ant_index):
     with open("out/cities.dat", "w") as fp:
         for city in cities:
             fp.write(f"{city.x} {city.y}\n")
@@ -180,34 +166,58 @@ def emitDataFile(ant_index):
                  cities[ants[ant_index].path[0]].y}\n")
 
 
-def emitTable():
-    for from_city in range(MAX_CITIES):
-        for to_city in range(MAX_CITIES):
-            print(f"{pheromone[from_city][to_city]:5.2g} ", end="")
-        print()
-    print()
-
-
 def main():
-    curTime = 0
+    # max_cities = int(input("Enter the number of cities: "))
+    # max_ants = int(input("Enter the number of ants: "))
+    # max_distance = int(input("Enter the maximum distance: "))
+    # init_pheromone = float(input("Enter the initial pheromone level: "))
+    # alpha = float(input("Enter the alpha value: "))
+    # beta = float(input("Enter the beta value: "))
+    # rho = float(input("Enter the rho value: "))
+    # qval = float(input("Enter the Q value: "))
+    # max_time = int(input("Enter the maximum time: "))
+
+    max_cities = 20
+    max_ants = 10
+    max_distance = 100
+    init_pheromone = 1.0
+    alpha = 1.0
+    beta = 5.0
+    rho = 0.5
+    qval = 100
+    max_time = 100
+
+    cities = [City() for _ in range(max_cities)]
+    ants = [Ant(max_cities) for _ in range(max_ants)]
+    distance = [[0.0] * max_cities for _ in range(max_cities)]
+    pheromone = [[init_pheromone] * max_cities for _ in range(max_cities)]
+    best = float('inf')
+    bestIndex = 0
+    global INIT_PHEROMONE
+    INIT_PHEROMONE = init_pheromone
+
     random.seed()
+    init(cities, ants, distance, pheromone,
+         max_cities, max_distance, init_pheromone)
 
-    init()
-
-    # if out directory does not exist, create it
     if not os.path.exists("out"):
         os.makedirs("out")
 
-    while curTime < MAX_TIME:
+    curTime = 0
+    while curTime < max_time:
         curTime += 1
-        if simulateAnts() == 0:
-            updateTrails()
-            if curTime != MAX_TIME:
-                restartAnts()
+        if simulateAnts(ants, pheromone, distance, alpha, beta, max_cities) == 0:
+            updateTrails(ants, pheromone, distance, rho, qval, max_cities)
+            if curTime != max_time:
+                best, bestIndex = restartAnts(
+                    ants, best, bestIndex, max_cities)
+            # if curTime % 10 == 0:
+                # rounded_pheromone = [[round(cell, 2) for cell in row] for row in pheromone]
+                # print(tabulate(rounded_pheromone, tablefmt="grid"))
             print(f"Time is {curTime} ({best})")
 
-    print(f"best tour {best}\n\n")
-    emitDataFile(bestIndex)
+    print(f"Best tour length: {best}")
+    emitDataFile(cities, ants, bestIndex)
 
 
 if __name__ == "__main__":
