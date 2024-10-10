@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 # Python 3.12.6
 
+from matplotlib.backends.backend_agg import FigureCanvasAgg
+from PIL import Image
 import os
 import random
 import math
@@ -167,8 +169,6 @@ def emitDataFile(cities, ants, ant_index):
         fp.write(f"{cities[ants[ant_index].path[0]].x} {
                  cities[ants[ant_index].path[0]].y}\n")
 
-from matplotlib.backends.backend_agg import FigureCanvasAgg
-from PIL import Image
 
 def main():
     # max_cities = int(input("Enter the number of cities: "))
@@ -230,7 +230,6 @@ def main():
                 # Extract weights
                 weights = [G[u][v]['weight'] for u, v in G.edges()]
 
-
                 # Draw the graph with weights as edge widths
                 nx.draw(G, pos, with_labels=True, width=weights)
 
@@ -241,10 +240,11 @@ def main():
                 canvas.draw()
 
                 width, height = fig.get_size_inches() * fig.get_dpi()
-                pixel_data = canvas.buffer_rgba() # r, g, b, a
+                pixel_data = canvas.buffer_rgba()  # r, g, b, a
 
                 # Save the image to a file
-                image = Image.frombytes("RGBA", (int(width), int(height)), pixel_data)
+                image = Image.frombytes(
+                    "RGBA", (int(width), int(height)), pixel_data)
                 image.save("out/antalg.png")
 
             print(f"Time is {curTime} ({best})")
