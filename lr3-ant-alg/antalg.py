@@ -26,7 +26,7 @@ init_pheromone = 0
 
 data_blob = {
     'num_cities': None,
-    'max_ants': None,
+    'num_ants': None,
     'max_distance': None,
     'init_pheromone': None,
     'alpha': None,
@@ -40,7 +40,7 @@ data_blob = {
 
 default_data_blob = {
     'num_cities': 20,
-    'max_ants': 10,
+    'num_ants': 10,
     'max_distance': 100,
     'init_pheromone': 1.0,
     'alpha': 1.0,
@@ -240,7 +240,7 @@ def main():
     best_length_y.clear()
 
     cities = [City() for _ in range(data_blob['num_cities'])]
-    ants = [Ant(data_blob['num_cities']) for _ in range(data_blob['max_ants'])]
+    ants = [Ant(data_blob['num_cities']) for _ in range(data_blob['num_ants'])]
     distance = [[0.0] * data_blob['num_cities']
                 for _ in range(data_blob['num_cities'])]
     pheromone = [[init_pheromone] * data_blob['num_cities']
@@ -442,7 +442,7 @@ def update_layout():
 def read_data_blob_from_ui():
     global data_blob
     data_blob['num_cities'] = dpg.get_value("num_cities")
-    data_blob['max_ants'] = dpg.get_value("num_ants")
+    data_blob['num_ants'] = dpg.get_value("num_ants")
     data_blob['max_distance'] = dpg.get_value("max_distance")
     data_blob['init_pheromone'] = dpg.get_value("init_pheromone")
     data_blob['alpha'] = dpg.get_value("alpha")
@@ -481,7 +481,7 @@ def reset():
     global data_blob, default_data_blob
     data_blob = default_data_blob
     dpg.set_value("num_cities", data_blob['num_cities'])
-    dpg.set_value("num_ants", data_blob['max_ants'])
+    dpg.set_value("num_ants", data_blob['num_ants'])
     dpg.set_value("max_distance", data_blob['max_distance'])
     dpg.set_value("init_pheromone", data_blob['init_pheromone'])
     dpg.set_value("alpha", data_blob['alpha'])
