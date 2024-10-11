@@ -25,7 +25,7 @@ is_running = False
 init_pheromone = 0
 
 data_blob = {
-    'max_cities': None,
+    'num_cities': None,
     'max_ants': None,
     'max_distance': None,
     'init_pheromone': None,
@@ -39,7 +39,7 @@ data_blob = {
 }
 
 default_data_blob = {
-    'max_cities': 20,
+    'num_cities': 20,
     'max_ants': 10,
     'max_distance': 100,
     'init_pheromone': 1.0,
@@ -239,19 +239,19 @@ def main():
     best_length_x.clear()
     best_length_y.clear()
 
-    cities = [City() for _ in range(data_blob['max_cities'])]
-    ants = [Ant(data_blob['max_cities']) for _ in range(data_blob['max_ants'])]
-    distance = [[0.0] * data_blob['max_cities']
-                for _ in range(data_blob['max_cities'])]
-    pheromone = [[init_pheromone] * data_blob['max_cities']
-                 for _ in range(data_blob['max_cities'])]
+    cities = [City() for _ in range(data_blob['num_cities'])]
+    ants = [Ant(data_blob['num_cities']) for _ in range(data_blob['max_ants'])]
+    distance = [[0.0] * data_blob['num_cities']
+                for _ in range(data_blob['num_cities'])]
+    pheromone = [[init_pheromone] * data_blob['num_cities']
+                 for _ in range(data_blob['num_cities'])]
     best = float('inf')
     bestIndex = 0
     init_pheromone = data_blob['init_pheromone']
 
     random.seed()
     init(cities, ants, distance, pheromone,
-         data_blob['max_cities'], data_blob['max_distance'], init_pheromone)
+         data_blob['num_cities'], data_blob['max_distance'], init_pheromone)
 
     if not os.path.exists("out"):
         os.makedirs("out")
@@ -264,18 +264,18 @@ def main():
             break
         curTime += 1
         if simulateAnts(ants, pheromone, distance, data_blob['alpha'], \
-                        data_blob['beta'], data_blob['max_cities']) == 0:
+                        data_blob['beta'], data_blob['num_cities']) == 0:
             updateTrails(ants, pheromone, distance, data_blob['rho'], \
-                         data_blob['qval'], data_blob['max_cities'])
+                         data_blob['qval'], data_blob['num_cities'])
             if curTime != data_blob['max_time']:
                 best, bestIndex = restartAnts(
-                    ants, best, bestIndex, data_blob['max_cities'])
+                    ants, best, bestIndex, data_blob['num_cities'])
 
             # PLOTTING
             cmap = LinearSegmentedColormap.from_list(
                 'custom_cmap', ['#FFA500', '#FF0000', '#00FF00'])
             # plot the pheromone matrix as networkx graph
-            max_cities = data_blob['max_cities']
+            max_cities = data_blob['num_cities']
             networkx_seed = data_blob['networkx_seed']
 
             texture_res_factor = TEXTURE_FACTOR / NETWOKX_SIZE_DELIMITER
@@ -293,10 +293,10 @@ def main():
             # resize plot in pixels
             fig.set_size_inches(
                 TEXTURE_WIDTH / fig.get_dpi(), TEXTURE_WIDTH / fig.get_dpi())
-            for i in range(data_blob['max_cities']):
+            for i in range(data_blob['num_cities']):
                 G.add_node(i, weight=0.4)
-            for i in range(data_blob['max_cities']):
-                for j in range(i + 1, data_blob['max_cities']):
+            for i in range(data_blob['num_cities']):
+                for j in range(i + 1, data_blob['num_cities']):
                     G.add_edge(i, j, weight=pheromone[i][j])
 
             # Extract weights
@@ -441,7 +441,7 @@ def update_layout():
 
 def read_data_blob_from_ui():
     global data_blob
-    data_blob['max_cities'] = dpg.get_value("num_cities")
+    data_blob['num_cities'] = dpg.get_value("num_cities")
     data_blob['max_ants'] = dpg.get_value("num_ants")
     data_blob['max_distance'] = dpg.get_value("max_distance")
     data_blob['init_pheromone'] = dpg.get_value("init_pheromone")
@@ -480,7 +480,7 @@ def stop():
 def reset():
     global data_blob, default_data_blob
     data_blob = default_data_blob
-    dpg.set_value("num_cities", data_blob['max_cities'])
+    dpg.set_value("num_cities", data_blob['num_cities'])
     dpg.set_value("num_ants", data_blob['max_ants'])
     dpg.set_value("max_distance", data_blob['max_distance'])
     dpg.set_value("init_pheromone", data_blob['init_pheromone'])
