@@ -346,7 +346,7 @@ def main():
 
             dpg.set_value("shown_iteration_text", f"{curTime}")
 
-            if -1 in ants[bestIndex].path:
+            if -1 in ants[bestIndex].path or best == float('inf'):
                 dpg.set_value("is_solution_found", "No")
             else:
                 dpg.set_value("is_solution_found", "Yes")
@@ -363,7 +363,7 @@ def main():
     # print(f"Best tour length: {best}")
 
     best_solution = ""
-    if -1 in ants[bestIndex].path:
+    if -1 in ants[bestIndex].path or best == float('inf'):
         # if -1 in solution, print error
         # print("Solution was not found")
         best_solution = "Solution was not found"
