@@ -479,18 +479,20 @@ def stop():
 
 def reset():
     global data_blob, default_data_blob
-    data_blob = default_data_blob
-    dpg.set_value("num_cities", data_blob['num_cities'])
-    dpg.set_value("num_ants", data_blob['num_ants'])
-    dpg.set_value("max_distance", data_blob['max_distance'])
-    dpg.set_value("init_pheromone", data_blob['init_pheromone'])
-    dpg.set_value("alpha", data_blob['alpha'])
-    dpg.set_value("beta", data_blob['beta'])
-    dpg.set_value("rho", data_blob['rho'])
-    dpg.set_value("qval", data_blob['qval'])
-    dpg.set_value("max_time", data_blob['max_time'])
-    dpg.set_value("networkx_seed", data_blob['networkx_seed'])
-    dpg.set_value("stop_on_change", data_blob['stop_on_change'])
+    data_blob = default_data_blob.copy()
+    print(data_blob)
+    print(default_data_blob)
+    dpg.set_value("num_cities", default_data_blob['num_cities'])
+    dpg.set_value("num_ants", default_data_blob['num_ants'])
+    dpg.set_value("max_distance", default_data_blob['max_distance'])
+    dpg.set_value("init_pheromone", default_data_blob['init_pheromone'])
+    dpg.set_value("alpha", default_data_blob['alpha'])
+    dpg.set_value("beta", default_data_blob['beta'])
+    dpg.set_value("rho", default_data_blob['rho'])
+    dpg.set_value("qval", default_data_blob['qval'])
+    dpg.set_value("max_time", default_data_blob['max_time'])
+    dpg.set_value("networkx_seed", default_data_blob['networkx_seed'])
+    dpg.set_value("stop_on_change", default_data_blob['stop_on_change'])
 
 
 def gen_texture_empty(width, height, scale=1):
