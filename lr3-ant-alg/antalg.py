@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 # Python 3.12.6
 
+import time
 import dearpygui.dearpygui as dpg
 import networkx as nx
 from matplotlib import pyplot as plt
@@ -32,7 +33,23 @@ data_blob = {
     'beta': None,
     'rho': None,
     'qval': None,
-    'max_time': None
+    'max_time': None,
+    'networkx_seed': None,
+    'stop_on_change': None,
+}
+
+default_data_blob = {
+    'max_cities': 20,
+    'max_ants': 10,
+    'max_distance': 100,
+    'init_pheromone': 1.0,
+    'alpha': 1.0,
+    'beta': 5.0,
+    'rho': 0.5,
+    'qval': 100,
+    'max_time': 100,
+    'networkx_seed': 100,
+    'stop_on_change': True,
 }
 
 best_length_y = []
@@ -41,8 +58,17 @@ best_length_x = []
 start_time = 0
 
 # Constants
-TEXTURE_WIDTH = 500
-TEXTURE_HEIGHT = 500
+TEXTURE_FACTOR = 500
+TEXTURE_WIDTH = TEXTURE_FACTOR
+TEXTURE_HEIGHT = TEXTURE_FACTOR
+NETWOKX_SIZE_DELIMITER = 500
+
+DEFAULT_RES_WIDTH_COEF = 3
+DEFAULT_RES_HEIGHT_COEF = 3
+DEFAULT_RES_FACTOR = 250
+
+DEFAULT_RES_WIDTH = int(DEFAULT_RES_WIDTH_COEF * DEFAULT_RES_FACTOR)
+DEFAULT_RES_HEIGHT = int(DEFAULT_RES_HEIGHT_COEF * DEFAULT_RES_FACTOR)
 
 
 class City:
@@ -131,7 +157,11 @@ def selectNextCity(ant_index, ants, pheromone, distance, alpha, beta, max_cities
     from_city = ants[ant_index].curCity
     denom = sum(antProduct(from_city, to_city, pheromone, distance, alpha, beta)
                 for to_city in range(max_cities) if ants[ant_index].tabu[to_city] == 0)
-    assert denom != 0.0
+    if denom == 0.0:
+        # Fallback: randomly select an unvisited city
+        unvisited_cities = [to_city for to_city in range(
+            max_cities) if ants[ant_index].tabu[to_city] == 0]
+        return random.choice(unvisited_cities)
 
     while True:
         to_city = random.randint(0, max_cities - 1)
@@ -199,26 +229,10 @@ def emitDataFile(cities, ants, ant_index):
 
 
 def main():
-    # max_cities = int(input("Enter the number of cities: "))
-    # max_ants = int(input("Enter the number of ants: "))
-    # max_distance = int(input("Enter the maximum distance: "))
-    # init_pheromone = float(input("Enter the initial pheromone level: "))
-    # alpha = float(input("Enter the alpha value: "))
-    # beta = float(input("Enter the beta value: "))
-    # rho = float(input("Enter the rho value: "))
-    # qval = float(input("Enter the Q value: "))
-    # max_time = int(input("Enter the maximum time: "))
-    global init_pheromone, TEXTURE_WIDTH, TEXTURE_HEIGHT, is_running, data_blob
-    # max_cities = 20
-    # max_ants = 10
-    # max_distance = 100
-    # init_pheromone = 1.0
-    # alpha = 1.0
-    # beta = 5.0
-    # rho = 0.5
-    # qval = 100
-    # max_time = 100
-    print(data_blob)
+    global init_pheromone, TEXTURE_WIDTH, TEXTURE_HEIGHT, is_running, data_blob, start_time, best_length_x, best_length_y
+
+    best_length_x.clear()
+    best_length_y.clear()
 
     cities = [City() for _ in range(data_blob['max_cities'])]
     ants = [Ant(data_blob['max_cities']) for _ in range(data_blob['max_ants'])]
@@ -237,6 +251,8 @@ def main():
     if not os.path.exists("out"):
         os.makedirs("out")
 
+    start_time = time.time()
+
     curTime = 0
     while curTime < data_blob['max_time']:
         if not is_running:
@@ -248,69 +264,107 @@ def main():
             if curTime != data_blob['max_time']:
                 best, bestIndex = restartAnts(
                     ants, best, bestIndex, data_blob['max_cities'])
-            if curTime % 1 == 0:
-                cmap = LinearSegmentedColormap.from_list(
-                    'custom_cmap', ['#FFA500', '#FF0000', '#00FF00'])
-                # plot the pheromone matrix as networkx graph
-                G = nx.random_geometric_graph(
-                    data_blob['max_cities'], radius=0.4, seed=data_blob['networkx_seed'])
-                pos = nx.get_node_attributes(G, "pos")
-                fig = plt.figure()
-                # resize plot in pixels
-                fig.set_size_inches(
-                    TEXTURE_WIDTH / fig.get_dpi(), TEXTURE_WIDTH / fig.get_dpi())
-                for i in range(data_blob['max_cities']):
-                    G.add_node(i)
-                for i in range(data_blob['max_cities']):
-                    for j in range(i + 1, data_blob['max_cities']):
-                        G.add_edge(i, j, weight=pheromone[i][j])
 
-                # Extract weights
-                weights = [G[u][v]['weight'] for u, v in G.edges()]
+            cmap = LinearSegmentedColormap.from_list(
+                'custom_cmap', ['#FFA500', '#FF0000', '#00FF00'])
+            # plot the pheromone matrix as networkx graph
+            max_cities = data_blob['max_cities']
+            networkx_seed = data_blob['networkx_seed']
 
-                # Normalize weights to range [0, 1]
-                norm_weights = np.array(weights) / max(weights)
+            texture_res_factor = TEXTURE_FACTOR / NETWOKX_SIZE_DELIMITER
 
-                # Map normalized weights to colors
-                edge_colors = [cmap(w) for w in norm_weights]
+            # Compute radius based on max_cities
+            size_factor = math.sqrt(
+                math.log(max_cities) / (math.pi * max_cities))
 
-                # Draw the graph with weights as edge widths
-                nx.draw(G, pos, with_labels=True, width=weights *
-                        20, edge_color=edge_colors)
+            G = nx.random_geometric_graph(
+                max_cities, radius=1, seed=networkx_seed)
+            pos = nx.get_node_attributes(G, "pos")
+            fig = plt.figure()
+            limits = plt.axis("off")  # turn off axis
+            fig.tight_layout(pad=0)
+            # resize plot in pixels
+            fig.set_size_inches(
+                TEXTURE_WIDTH / fig.get_dpi(), TEXTURE_WIDTH / fig.get_dpi())
+            for i in range(data_blob['max_cities']):
+                G.add_node(i, weight=0.4)
+            for i in range(data_blob['max_cities']):
+                for j in range(i + 1, data_blob['max_cities']):
+                    G.add_edge(i, j, weight=pheromone[i][j])
 
-                # pixels = plt.gcf().canvas.get_renderer().buffer_rgba()
-                # save pixels
-                # save_bmp(pixels, 800, 800, "out/antalg.bmp")
-                canvas = FigureCanvasAgg(fig)
-                canvas.draw()
+            # Extract weights
+            weights = [G[u][v]['weight'] for u, v in G.edges()]
 
-                width, height = fig.get_size_inches() * fig.get_dpi()
-                pixel_data = canvas.buffer_rgba()  # r, g, b, a
+            # Normalize weights to range [0, 1]
+            norm_weights = np.array(weights) / max(weights)
 
-                # Save the image to a file
-                # image = Image.frombytes(
-                #     "RGBA", (int(width), int(height)), pixel_data)
-                # image.save("out/antalg.png")
+            # Scale weights with texture_res_factor
+            widths = norm_weights * texture_res_factor * 4
 
-                # normalize pixel data to 0-1
-                pixel_data = [x / 255 for x in bytearray(pixel_data)]
+            # Map normalized weights to colors
+            edge_colors = [cmap(w) for w in norm_weights]
 
-                dpg.set_value("texture_tag", pixel_data)
-                plt.close(fig)
+            # Draw the graph with weights as edge widths
+            nx.draw_networkx(G, pos, with_labels=True, width=widths, edge_color=edge_colors, node_size=size_factor * 1000 * (texture_res_factor ** 2), node_color='#88AAFF', font_size=size_factor * 50 * (texture_res_factor), font_family='monospace')
 
-            print(f"Time is {curTime} ({best})")
+            canvas = FigureCanvasAgg(fig)
+            canvas.draw()
 
-    print(f"Best tour length: {best}")
+            width, height = fig.get_size_inches() * fig.get_dpi()
+            pixel_data = canvas.buffer_rgba()
 
+            # normalize pixel data to 0-1
+            pixel_data = [x / 255 for x in bytearray(pixel_data)]
+
+            dpg.set_value("texture_tag", pixel_data)
+            plt.close(fig)
+
+            _time = float(time.time() - start_time)
+            best_length_y.append(best)
+            best_length_x.append(_time)
+
+            if len(best_length_x) > 0:
+                dpg.set_value("series_best_length", [
+                              best_length_x, best_length_y])
+                dpg.fit_axis_data("y_axis_best_length")
+                dpg.fit_axis_data("x_axis_best_length")
+                dpg.set_value("temp_text", f"{best:.2f}")
+
+            dpg.set_value("shown_iteration_text", f"{curTime}")
+
+            if -1 in ants[bestIndex].path:
+                dpg.set_value("is_solution_found", "No")
+            else:
+                dpg.set_value("is_solution_found", "Yes")
+            # min_y = min(best_length_y)
+            max_y = max(best_length_y)
+            dpg.set_axis_limits("y_axis_best_length", 0, max_y + 0.01 * max_y)
+
+        _time = float(time.time() - start_time)
+        dpg.set_value("time_text", f"{_time:.2f}")
+        dpg.set_value("iteration_text", f"{curTime}")
+
+        # print(f"Time is {curTime} ({best})")
+
+    # print(f"Best tour length: {best}")
+
+    best_solution = ""
     if -1 in ants[bestIndex].path:
         # if -1 in solution, print error
-        print("Solution was not found")
+        # print("Solution was not found")
+        best_solution = "Solution was not found"
     else:
         # print best solution as 12 > 23 > 234 > ...
-        print("Best solution:")
+        # print("Best solution:")
         for city_index in ants[bestIndex].path:
-            print(f"{city_index} > ", end="")
-        print(f"{ants[bestIndex].path[0]}")
+            best_solution += f"{city_index} > "
+        best_solution += f"{ants[bestIndex].path[0]}"
+        # print(best_solution)
+        
+    # Save best solution to file
+    with open("out/best_solution.txt", "w") as file:
+        file.write(best_solution)
+        
         emitDataFile(cities, ants, bestIndex)
     stop()
 
@@ -328,7 +382,7 @@ def update_layout():
     # texture_height = image_size / 4
 
     plots_width = port_width - image_size - 20
-    plots_count = 1
+    plots_count = 2
     plots_height = image_size / plots_count - plots_count + 1  # / 3.031
 
     inputs_width = min(max(port_width * 0.15, 100), 500)
@@ -357,17 +411,18 @@ def update_layout():
     if dpg.does_item_exist("max_time"):
         dpg.configure_item("max_time", width=inputs_width)
 
-
     if dpg.does_item_exist("temp_text"):
         dpg.configure_item("temp_text", width=outputs_width)
-    if dpg.does_item_exist("energy_text"):
-        dpg.configure_item("energy_text", width=outputs_width)
-    if dpg.does_item_exist("bads_text"):
-        dpg.configure_item("bads_text", width=outputs_width)
+    if dpg.does_item_exist("iteration_text"):
+        dpg.configure_item("iteration_text", width=outputs_width)
+    if dpg.does_item_exist("shown_iteration_text"):
+        dpg.configure_item("shown_iteration_text", width=outputs_width)
     if dpg.does_item_exist("time_text"):
         dpg.configure_item("time_text", width=outputs_width)
     if dpg.does_item_exist("networkx_seed"):
         dpg.configure_item("networkx_seed", width=outputs_width)
+    if dpg.does_item_exist("is_solution_found"):
+        dpg.configure_item("is_solution_found", width=outputs_width)
 
     if dpg.does_item_exist("plot_best_length"):
         dpg.configure_item("plot_best_length",
@@ -391,6 +446,7 @@ def read_data_blob_from_ui():
     data_blob['qval'] = dpg.get_value("qval")
     data_blob['max_time'] = dpg.get_value("max_time")
     data_blob['networkx_seed'] = dpg.get_value("networkx_seed")
+    data_blob['stop_on_change'] = dpg.get_value("stop_on_change")
 
 
 def run():
@@ -414,6 +470,22 @@ def stop():
         except:
             pass
     process = None
+
+
+def reset():
+    global data_blob, default_data_blob
+    data_blob = default_data_blob
+    dpg.set_value("num_cities", data_blob['max_cities'])
+    dpg.set_value("num_ants", data_blob['max_ants'])
+    dpg.set_value("max_distance", data_blob['max_distance'])
+    dpg.set_value("init_pheromone", data_blob['init_pheromone'])
+    dpg.set_value("alpha", data_blob['alpha'])
+    dpg.set_value("beta", data_blob['beta'])
+    dpg.set_value("rho", data_blob['rho'])
+    dpg.set_value("qval", data_blob['qval'])
+    dpg.set_value("max_time", data_blob['max_time'])
+    dpg.set_value("networkx_seed", data_blob['networkx_seed'])
+    dpg.set_value("stop_on_change", data_blob['stop_on_change'])
 
 
 def gen_texture_empty(width, height, scale=1):
@@ -447,21 +519,32 @@ def gen_texture_solid(width: int, height: int, color: list) -> list:
 
 
 def app():
-    global TEXTURE_WIDTH, TEXTURE_HEIGHT, data_blob
+    global TEXTURE_WIDTH, TEXTURE_HEIGHT, data_blob, best_length_x, best_length_y, start_time
     dpg.create_context()
-    dpg.create_viewport(title='Ant algorithm', width=800, height=600)
+
+    with dpg.font_registry():
+        with dpg.font(r"public/fonts/Roboto-Regular.ttf",
+            14,
+            default_font=True
+        ) as default_font:
+            dpg.add_font_range_hint(dpg.mvFontRangeHint_Default)
+            dpg.add_font_range_hint(dpg.mvFontRangeHint_Cyrillic)
+
+
+
+
+    dpg.create_viewport(title='Ant algorithm',
+                        width=DEFAULT_RES_WIDTH, height=DEFAULT_RES_HEIGHT)
     dpg.set_viewport_resize_callback(update_layout)
     # print(dpg.get_viewport_client_width())
     # print(dpg.get_viewport_client_height())
 
-    # width, height, channels, data = dpg.load_image("solution.png")
     with dpg.texture_registry(show=False):
         dpg.add_dynamic_texture(
             width=TEXTURE_WIDTH, height=TEXTURE_HEIGHT, default_value=gen_texture_solid(TEXTURE_WIDTH, TEXTURE_HEIGHT, [1, 1, 1, 1]), tag="texture_tag")
 
     with dpg.window(label="Example Window", tag="fullscreen"):
-
-        with dpg.theme(tag="plot_theme_temp"):
+        with dpg.theme(tag="plot_theme_best_length"):
             with dpg.theme_component(dpg.mvLineSeries):
                 dpg.add_theme_color(
                     dpg.mvPlotCol_Line, (255, 99, 99),
@@ -505,43 +588,55 @@ def app():
         #             category=dpg.mvThemeCat_Plots)
 
         def on_value_change_num_cities(sender, app_data, user_data):
-            stop()
+            if user_data['stop_on_change']:
+                stop()
             user_data['num_cities'] = int(app_data)
 
         def on_value_change_num_ants(sender, app_data, user_data):
-            stop()
+            if user_data['stop_on_change']:
+                stop()
             user_data['num_ants'] = int(app_data)
 
         def on_value_change_max_distance(sender, app_data, user_data):
-            stop()
+            if user_data['stop_on_change']:
+                stop()
             user_data['max_distance'] = int(app_data)
 
         def on_value_change_init_pheromone(sender, app_data, user_data):
-            stop()
+            if user_data['stop_on_change']:
+                stop()
             user_data['init_pheromone'] = float(app_data)
 
         def on_value_change_alpha(sender, app_data, user_data):
-            stop()
+            if user_data['stop_on_change']:
+                stop()
             user_data['alpha'] = float(app_data)
 
         def on_value_change_beta(sender, app_data, user_data):
-            stop()
+            if user_data['stop_on_change']:
+                stop()
             user_data['beta'] = float(app_data)
 
         def on_value_change_rho(sender, app_data, user_data):
-            stop()
+            if user_data['stop_on_change']:
+                stop()
             user_data['rho'] = float(app_data)
 
         def on_value_change_qval(sender, app_data, user_data):
-            stop()
+            if user_data['stop_on_change']:
+                stop()
             user_data['qval'] = float(app_data)
 
         def on_value_change_max_time(sender, app_data, user_data):
-            stop()
+            if user_data['stop_on_change']:
+                stop()
             user_data['max_time'] = int(app_data)
 
         def on_value_change_networkx_seed(sender, app_data, user_data):
             user_data['networkx_seed'] = int(app_data)
+
+        def on_value_change_stop_on_change(sender, app_data, user_data):
+            user_data['stop_on_change'] = app_data
 
         # def on_value_change_alpha(sender, app_data, user_data):
         #     stop()
@@ -561,7 +656,6 @@ def app():
         # Максимальная температура
         with dpg.group(horizontal=True):
             with dpg.group():
-
                 # Max city count
                 dpg.add_input_int(label="Number of cities",
                                   default_value=20,
@@ -611,7 +705,7 @@ def app():
                                     user_data=data_blob,
                                     callback=on_value_change_beta,
                                     min_value=0.0,
-                                    step=0.01,
+                                    step=0.1,
                                     tag="beta")
                 # Rho
                 dpg.add_input_float(label="Rho",
@@ -619,7 +713,7 @@ def app():
                                     width=200,
                                     user_data=data_blob,
                                     callback=on_value_change_rho,
-                                    min_value=0.0,
+                                    min_value=0.0, max_value=0.999999,
                                     step=0.01,
                                     tag="rho")
                 # Q value
@@ -641,39 +735,52 @@ def app():
                                   tag="max_time")
 
             with dpg.group():
-                # text output
-                dpg.add_input_text(default_value="...",
-                                   readonly=True,
-                                   tag="temp_text",
-                                   width=50)
-                dpg.add_input_text(default_value="...",
-                                   readonly=True,
-                                   tag="energy_text",
-                                   width=50)
-                dpg.add_input_text(default_value="...",
-                                   readonly=True,
-                                   tag="bads_text",
-                                   width=50)
-                dpg.add_input_text(default_value="...",
-                                   readonly=True,
-                                   tag="time_text",
-                                   width=50)
-                dpg.add_input_int(label="Image seed",
-                                  default_value=100,
-                                  width=50,
-                                  user_data=data_blob,
-                                  callback=on_value_change_networkx_seed,
-                                  min_value=1,
-                                  tag="networkx_seed")
+                with dpg.group(horizontal=True):
+                    with dpg.group():
+                        # text output
+                        dpg.add_input_text(default_value="...",
+                                           readonly=True,
+                                           tag="temp_text",
+                                           width=50)
+                        dpg.add_input_text(default_value="...",
+                                           readonly=True,
+                                           tag="iteration_text",
+                                           width=50)
+                        dpg.add_input_text(default_value="...",
+                                           readonly=True,
+                                           tag="shown_iteration_text",
+                                           width=50)
+                        dpg.add_input_text(default_value="...",
+                                           readonly=True,
+                                           tag="time_text",
+                                           width=50)
+                        dpg.add_input_text(default_value="...",
+                                             readonly=True,
+                                             tag="is_solution_found",
+                                             width=50)
 
-            with dpg.group():
-                dpg.add_text("Temperature")
-                dpg.add_text("Best Energy")
-                dpg.add_text("Bad Solutions")
-                dpg.add_text("Time")
+                    with dpg.group():
+                        dpg.add_text("Best tour length")
+                        dpg.add_text("Iteration")
+                        dpg.add_text("Iteration on screen")
+                        dpg.add_text("Time, s")
+                        dpg.add_text("Solution found")
+
+                with dpg.group():
+                    dpg.add_input_int(label="Image seed",
+                                      default_value=100,
+                                      width=50,
+                                      user_data=data_blob,
+                                      callback=on_value_change_networkx_seed,
+                                      min_value=1,
+                                      tag="networkx_seed")
+                    dpg.add_checkbox(label="Stop on change",
+                                     default_value=True,
+                                     tag="stop_on_change")
 
         with dpg.group(horizontal=True):
             dpg.add_button(label="run", callback=run)
+            dpg.add_button(label="reset defaults", callback=reset)
             dpg.add_button(label="stop", callback=stop)
 
         # global texture_width, texture_height
@@ -697,14 +804,15 @@ def app():
                               tag="plot_best_length"):
                     dpg.add_plot_legend()
                     dpg.add_plot_axis(
-                        dpg.mvXAxis, label="iteration", tag="x_axis_best_length")
+                        dpg.mvXAxis, label="time. s", tag="x_axis_best_length")
                     dpg.add_plot_axis(
                         dpg.mvYAxis, label="best length", tag="y_axis_best_length")
-                    # dpg.set_axis_limits("y_axis_temp", 0, data_cb["init_temp"])
-                    # dpg.add_line_series(
-                    #     temperature_x, temperature_y, parent="y_axis_temp",
-                    #     tag="series_tag_temp")
-                # dpg.bind_item_theme("series_tag_temp", "plot_theme_temp")
+                    # dpg.set_axis_limits("y_axis_best_length", 0, data_blob["init_temp"])
+                    dpg.add_line_series(
+                        best_length_x, best_length_y, parent="y_axis_best_length",
+                        tag="series_best_length")
+                dpg.bind_item_theme("series_best_length",
+                                    "plot_theme_best_length")
                 # with dpg.plot(label="Best Energy",
                 #               width=plots_width,
                 #               height=plots_height,
@@ -734,6 +842,7 @@ def app():
 
     update_layout()
 
+    dpg.bind_font(default_font)
     dpg.setup_dearpygui()
     dpg.set_primary_window("fullscreen", True)
     dpg.show_viewport()
