@@ -480,8 +480,6 @@ def stop():
 def reset():
     global data_blob, default_data_blob
     data_blob = default_data_blob.copy()
-    print(data_blob)
-    print(default_data_blob)
     dpg.set_value("num_cities", default_data_blob['num_cities'])
     dpg.set_value("num_ants", default_data_blob['num_ants'])
     dpg.set_value("max_distance", default_data_blob['max_distance'])
