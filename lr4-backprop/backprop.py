@@ -8,18 +8,14 @@ LEARN_RATE = 0.2
 MAX_SAMPLES = 18
 
 # Weight Structures
-wih = np.random.uniform(-0.5, 0.5, (INPUT_NEURONS + 1, HIDDEN_NEURONS))
-who = np.random.uniform(-0.5, 0.5, (HIDDEN_NEURONS + 1, OUTPUT_NEURONS))
+weights_input_hidden = np.random.uniform(-0.5, 0.5, (INPUT_NEURONS + 1, HIDDEN_NEURONS))
+weights_hidden_output = np.random.uniform(-0.5, 0.5, (HIDDEN_NEURONS + 1, OUTPUT_NEURONS))
 
 # Activations
 inputs = np.zeros(INPUT_NEURONS)
 hidden = np.zeros(HIDDEN_NEURONS)
 target = np.zeros(OUTPUT_NEURONS)
 actual = np.zeros(OUTPUT_NEURONS)
-
-# Unit Errors
-erro = np.zeros(OUTPUT_NEURONS)
-errh = np.zeros(HIDDEN_NEURONS)
 
 # Samples
 samples = [
@@ -53,17 +49,18 @@ def sigmoid_derivative(val):
 
 def feed_forward():
     global hidden, actual
-    hidden = sigmoid(np.dot(inputs, wih[:-1]) + wih[-1])
-    actual = sigmoid(np.dot(hidden, who[:-1]) + who[-1])
+    hidden = sigmoid(np.dot(inputs, weights_input_hidden[:-1]) + weights_input_hidden[-1])
+    actual = sigmoid(np.dot(hidden, weights_hidden_output[:-1]) + weights_hidden_output[-1])
 
 def back_propagate():
-    global wih, who
+    global weights_input_hidden, weights_hidden_output
     erro = (target - actual) * sigmoid_derivative(actual)
-    errh = np.dot(erro, who[:-1].T) * sigmoid_derivative(hidden)
-    who[:-1] += LEARN_RATE * np.outer(hidden, erro)
-    who[-1] += LEARN_RATE * erro
-    wih[:-1] += LEARN_RATE * np.outer(inputs, errh)
-    wih[-1] += LEARN_RATE * errh
+    errh = np.dot(erro, weights_hidden_output[:-1].T) * sigmoid_derivative(hidden)
+    # np.outer is used to calculate the outer product of two vectors
+    weights_hidden_output[:-1] += LEARN_RATE * np.outer(hidden, erro)
+    weights_hidden_output[-1] += LEARN_RATE * erro
+    weights_input_hidden[:-1] += LEARN_RATE * np.outer(inputs, errh)
+    weights_input_hidden[-1] += LEARN_RATE * errh
 
 def action(vector):
     return np.argmax(vector)
@@ -79,7 +76,7 @@ def main():
         target = np.array(sample[INPUT_NEURONS])
         feed_forward()
         err = 0.5 * np.sum((target - actual) ** 2)
-        # print(f"mse = {err}")
+        print(f"mse = {err}")
         back_propagate()
         iterations += 1
 
