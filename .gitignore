@@ -16,3 +16,5 @@ build/
 dist/
 venv/
 out/
+lr4*/data/*
+*.npz

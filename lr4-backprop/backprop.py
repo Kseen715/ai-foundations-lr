@@ -5,7 +5,7 @@ INPUT_NEURONS = 4
 HIDDEN_NEURONS = 3
 OUTPUT_NEURONS = 4
 LEARN_RATE = 0.2
-MAX_SAMPLES = 18
+# MAX_SAMPLES = 18
 
 # Weight Structures
 weights_input_hidden = np.random.uniform(-0.5, 0.5, (INPUT_NEURONS + 1, HIDDEN_NEURONS))
@@ -19,6 +19,24 @@ actual = np.zeros(OUTPUT_NEURONS)
 
 # Samples
 samples = [
+    [2.0, 0.0, 0.0, 0.0, [0.0, 0.0, 1.0, 0.0]],
+    [2.0, 0.0, 0.0, 1.0, [0.0, 0.0, 1.0, 0.0]],
+    [2.0, 0.0, 1.0, 1.0, [1.0, 0.0, 0.0, 0.0]],
+    [2.0, 0.0, 1.0, 2.0, [1.0, 0.0, 0.0, 0.0]],
+    [2.0, 1.0, 0.0, 2.0, [0.0, 0.0, 0.0, 1.0]],
+    [2.0, 1.0, 0.0, 1.0, [1.0, 0.0, 0.0, 0.0]],
+    [1.0, 0.0, 0.0, 0.0, [0.0, 0.0, 1.0, 0.0]],
+    [1.0, 0.0, 0.0, 1.0, [0.0, 0.0, 0.0, 1.0]],
+    [1.0, 0.0, 1.0, 1.0, [1.0, 0.0, 0.0, 0.0]],
+    [1.0, 0.0, 1.0, 2.0, [0.0, 0.0, 0.0, 1.0]],
+    [1.0, 1.0, 0.0, 2.0, [0.0, 0.0, 0.0, 1.0]],
+    [1.0, 1.0, 0.0, 1.0, [0.0, 0.0, 0.0, 1.0]],
+    [0.0, 0.0, 0.0, 0.0, [0.0, 0.0, 1.0, 0.0]],
+    [0.0, 0.0, 0.0, 1.0, [0.0, 0.0, 0.0, 1.0]],
+    [0.0, 0.0, 1.0, 1.0, [0.0, 0.0, 0.0, 1.0]],
+    [0.0, 0.0, 1.0, 2.0, [0.0, 1.0, 0.0, 0.0]],
+    [0.0, 1.0, 0.0, 2.0, [0.0, 1.0, 0.0, 0.0]],
+    [0.0, 1.0, 0.0, 1.0, [0.0, 0.0, 0.0, 1.0]],
     [2.0, 0.0, 0.0, 0.0, [0.0, 0.0, 1.0, 0.0]],
     [2.0, 0.0, 0.0, 1.0, [0.0, 0.0, 1.0, 0.0]],
     [2.0, 0.0, 1.0, 1.0, [1.0, 0.0, 0.0, 0.0]],
@@ -65,23 +83,48 @@ def back_propagate():
 def action(vector):
     return np.argmax(vector)
 
-def main():
+def save_model(filemane="weights.npz"):
+    global weights_input_hidden, weights_hidden_output, INPUT_NEURONS, HIDDEN_NEURONS, OUTPUT_NEURONS
+    # zip the weights and save them to a file
+    with open(filemane, "wb") as f:
+        np.savez_compressed(f, INPUT_NEURONS, HIDDEN_NEURONS, OUTPUT_NEURONS, weights_input_hidden, weights_hidden_output)
+
+def load_model(filemane="weights.npz"):
+    # load the weights from a file
+    global weights_input_hidden, weights_hidden_output, INPUT_NEURONS, HIDDEN_NEURONS, OUTPUT_NEURONS
+    with open(filemane, "rb") as f:
+        data = np.load(f)
+        INPUT_NEURONS = data["arr_0"]
+        HIDDEN_NEURONS = data["arr_1"]
+        OUTPUT_NEURONS = data["arr_2"]
+        weights_input_hidden = data["arr_3"]
+        weights_hidden_output = data["arr_4"]
+
+def train():
     global inputs, target
     iterations = 0
     sum_correct = 0
 
+    # shuffle the samples
+    np.random.shuffle(samples)
+
+    # 70:30 split
+    train, test = samples[:len(samples) * 7 // 10], samples[len(samples) * 7 // 10:] 
+
     while iterations <= 100000:
-        sample = samples[iterations % MAX_SAMPLES]
+        print('', end="\r")
+        sample = train[iterations % len(train)]
         inputs = np.array(sample[:INPUT_NEURONS])
         target = np.array(sample[INPUT_NEURONS])
         feed_forward()
         err = 0.5 * np.sum((target - actual) ** 2)
-        print(f"mse = {err}")
+        print(f"mse = {err}", end="")
         back_propagate()
         iterations += 1
+    print()
 
     sum_correct = 0
-    for sample in samples:
+    for sample in test:
         inputs = np.array(sample[:INPUT_NEURONS])
         target = np.array(sample[INPUT_NEURONS])
         feed_forward()
@@ -90,7 +133,15 @@ def main():
         else:
             print(f"{inputs} {strings[action(actual)]} ({strings[action(target)]})")
 
-    print(f"Network is {sum_correct / MAX_SAMPLES * 100.0}% correct")
+    print(f"Network is {sum_correct / len(test) * 100.0}% correct")
+
+    save_model()
+
+def main():
+    global inputs, target, weights_hidden_output, weights_input_hidden
+    train()
+
+    load_model()
 
     test_cases = [
         [2.0, 1.0, 1.0, 1.0],
