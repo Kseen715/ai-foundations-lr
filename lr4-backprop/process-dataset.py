@@ -2,21 +2,17 @@ import zipfile
 import io
 import os
 from pprint import pprint
+import random
 
-import PIL
 from PIL import Image
 import colorama as clr
 
-# rows = [
-# 	["Hello", "🌎"],
-# 	[],
-# 	[None, ""]
-# ]
 
 def main():
     # for each folder in 2D_Geometric_Shapes_Dataset count the number of files
-    side_size = 16
-    zip_name = f"data/processed_{side_size}x{side_size}.zip"
+    side_size = 32
+    limit = 10000
+    zip_name = f"data/processed_{side_size}x{side_size}_{limit}.zip"
 
     if os.path.exists(zip_name):
         response = input(f'{clr.Fore.YELLOW}File {
@@ -27,6 +23,9 @@ def main():
 
     with zipfile.ZipFile("data/archive (1).zip", "r") as zi:
         in_filelist = zi.filelist
+        # randomly shuffle the files in the list
+        in_filelist = random.sample(in_filelist, len(in_filelist))
+        
         files = []
         # count files in each folder 
 
@@ -53,11 +52,17 @@ def main():
         encoded_names = []
         # for every name add corresponing number
         for i in range(len(folder_names)):
-            encoded_names.append((folder_names[i], i))
+            encoded_names.append((folder_names[i], f"{int(i)}"))
 
         pprint(encoded_names)
+        with open(f"data/names_{side_size}x{side_size}_{limit}.json", "w") as f:
+            f.write(str(dict(encoded_names)).replace("'", '"'))
 
-        limit = 1000
+        # get all the categories set to 0
+        processed_catigories = {folder: 0 for folder in folder_names}
+
+        
+        copy_lim = limit
         for f in in_filelist:
             if limit == 0:
                 break
@@ -103,33 +108,13 @@ def main():
                 # grab number between _ and .png
                 id = int(f.filename.split("/")[2].split("_")[1].split(".")[0])
                 new_name = f"{encoded_names[folder_names.index(folder)][1]}_{id}.png"
+                processed_catigories[folder] += 1
 
                 zo.writestr(new_name, png_data)
                 print(f"{f.filename.split("/")[2]}({side_pixels}x{side_pixels}){clr.Fore.CYAN} -> {clr.Style.RESET_ALL}{new_name}({side_size}x{side_size})")
             limit -= 1
-
-            # exit()
-
-
-
-
-            # img.show()
-
-
-
-        # convert the image to black and white
-
-
-
-    
-        
-
-
-        # img.show()
-            
-
-
-
+        print(f"{clr.Fore.GREEN}Saved {copy_lim} files to {zip_name}{clr.Style.RESET_ALL}")
+        pprint(processed_catigories)
 
 if __name__ == '__main__':
     main()
