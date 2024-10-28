@@ -161,7 +161,7 @@ def train(its=100000):
     save_model()
 
 
-def read_zip_to_np(filename):
+def read_zip_to_data_array(filename):
     global samples, strings
     classes_count = len(strings)
     res = []
@@ -231,7 +231,7 @@ def main():
     print(f"Output neurons: {output_neurons}")
     print(f"Learn rate: {LEARN_RATE}")
     read_json_names(f"data/names_{sides}x{sides}_{count}.json")
-    read_zip_to_np(f"data/processed_{sides}x{sides}_{count}.zip")
+    read_zip_to_data_array(f"data/processed_{sides}x{sides}_{count}.zip")
 
     # Weight Structures
     weights_input_hidden = np.random.uniform(-0.5,
