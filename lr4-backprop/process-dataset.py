@@ -47,6 +47,9 @@ def main():
         # get folder names 
         folder_names = [file["folder"] for file in files]
         folder_names = sorted(folder_names)
+        # drop "kite", "hepatgon", "hexagon" and "decagon" 
+        folder_names = [folder for folder in folder_names if folder not in ["kite", "heptagon", "hexagon", "decagon", "nonagon", "octagon", "oval", "pentagon", "parallelogram", "rhombus"]]
+
         print(folder_names)
 
         encoded_names = []
@@ -62,6 +65,7 @@ def main():
         processed_catigories = {folder: 0 for folder in folder_names}
 
         
+        written = 0
         copy_lim = limit
         for f in in_filelist:
             if limit == 0:
@@ -107,12 +111,16 @@ def main():
                 folder = f.filename.split("/")[1]
                 # grab number between _ and .png
                 id = int(f.filename.split("/")[2].split("_")[1].split(".")[0])
-                new_name = f"{encoded_names[folder_names.index(folder)][1]}_{id}.png"
-                processed_catigories[folder] += 1
-
-                zo.writestr(new_name, png_data)
-                print(f"{f.filename.split("/")[2]}({side_pixels}x{side_pixels}){clr.Fore.CYAN} -> {clr.Style.RESET_ALL}{new_name}({side_size}x{side_size})")
+                try:
+                    new_name = f"{encoded_names[folder_names.index(folder)][1]}_{id}.png"
+                    processed_catigories[folder] += 1
+                    zo.writestr(new_name, png_data)
+                    written += 1
+                    print(f"{written}:: {f.filename.split("/")[2]}({side_pixels}x{side_pixels}){clr.Fore.CYAN} -> {clr.Style.RESET_ALL}{new_name}({side_size}x{side_size})")
+                except ValueError:
+                    continue
             limit -= 1
+
         print(f"{clr.Fore.GREEN}Saved {copy_lim} files to {zip_name}{clr.Style.RESET_ALL}")
         pprint(processed_catigories)
 
