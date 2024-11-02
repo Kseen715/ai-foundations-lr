@@ -1,3 +1,7 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# Python 3.9
+
 import os
 
 from backprop import *
@@ -38,15 +42,20 @@ def predict(predict_pd: pd.DataFrame, verbose: int = 1):
 
 def tf_train(epoch_count: int = 1000):
     global samples, strings, model
-    train_data = samples[:-1]
-    train_labels = samples[-1]
+    # sample is matrix
+    # all columns except the last one
+    train_data = np.array([sample[:-1] for sample in samples])
+    # last column
+    train_labels = np.array([sample[-1] for sample in samples])
     # lb_logger.log_info("Train data: " + str(train_data))
     # lb_logger.log_info("Train labels: " + str(train_labels))
+    pprint(train_data[:5])
+    pprint(train_labels[:5])
 
     model = keras.Sequential([
         keras.layers.Dense(1024, activation='sigmoid'),
         keras.layers.Dense(768, activation='sigmoid'),
-        keras.layers.Dense(6, activation='sigmoid'),
+        keras.layers.Dense(3, activation='sigmoid'),
         # keras.layers.Dense(6)
     ])
 
@@ -62,6 +71,9 @@ def tf_train(epoch_count: int = 1000):
 
     print('Test accuracy: {}'.format(test_acc))
     # print('Test loss: {}'.format(test_loss))
+
+    if not os.path.exists('models'):
+        os.makedirs('models')
 
     # save model
     max_model_id = 0
@@ -92,15 +104,15 @@ def tf_main():
     sides = 32
     count = 10000
     input_neurons = sides * sides
-    print(f"Input neurons: {input_neurons}")
-    print(f"Hidden neurons: {hidden_neurons}")
-    print(f"Output neurons: {output_neurons}")
-    print(f"Learn rate: {LEARN_RATE}")
+    # print(f"Input neurons: {input_neurons}")
+    # print(f"Hidden neurons: {hidden_neurons}")
+    # print(f"Output neurons: {output_neurons}")
+    # print(f"Learn rate: {LEARN_RATE}")
     read_json_names(f"data/names_{sides}x{sides}_{count}.json")
     # samples [
     #   [0, 0, 0, [0, 0, 0]],
     # ]
-    read_zip_to_data_array(f"data/processed_{sides}x{sides}_{count}.zip") 
+    samples = read_zip_to_data_array(f"data/processed_{sides}x{sides}_{count}.zip") 
 
 
     tf_train(1000)
