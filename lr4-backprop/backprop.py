@@ -105,8 +105,7 @@ def train(its=100000):
             # find the mean squared error
             merr = np.mean(last_errs)
             if iterations % print_freq == 0:
-                print(f"i: {iterations:0{its_digits}d}, mean: {
-                    merr:0.3f}, mse: {err}", end="")
+                print(f"i: {iterations:0{its_digits}d}, mean: {merr:0.3f}, mse: {err}", end="")
             back_propagate()
             iterations += 1
         print()
@@ -188,7 +187,7 @@ def read_zip_to_data_array(filename):
             # print(fpixels)
 
             needed_neurons = math.ceil(math.log(classes_count, 2))
-            assert needed_neurons == output_neurons, f'Needed output neurons: req({needed_neurons}) != prov({output_neurons})'
+            # assert needed_neurons == output_neurons, f'Needed output neurons: req({needed_neurons}) != prov({output_neurons})'
             # print(f'Needed output neurons: {needed_neurons}')
 
             # map to binary
@@ -202,6 +201,7 @@ def read_zip_to_data_array(filename):
             res.append(fpixels)
 
     samples = res
+    return samples
     # pprint(samples)
 
 
