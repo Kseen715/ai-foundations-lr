@@ -50,16 +50,16 @@ OBJECTS = $(SOURCES:.c=$(OBJECT_EXTENSION))
 
 all: $(EXE_NAME)
 
-%$(OBJECT_EXTENSION): %.c
+%$(OBJECT_EXTENSION): %.c build_dir
 	$(CC) $(CFLAGS) $(C_INCLUDE_PATH) $(SYS_FLAGS) -c $< -o $(BUILD_DIR)/$@
 
-$(EXE_NAME): build_dir platform $(OBJECTS)
+$(EXE_NAME): build_dir $(OBJECTS)
 	$(CC) $(addprefix $(BUILD_DIR)/,$(OBJECTS)) -o $(BUILD_DIR)/$(EXE_NAME)$(EXE_EXTENSION) $(C_LIBS)
 
 run: $(EXE_NAME)
 	cd $(BUILD_DIR) && $(EXE_NAME)$(EXE_EXTENSION) && cd ../
 
-build_dir:
+build_dir: platform
 	@if not exist $(BUILD_DIR) mkdir $(BUILD_DIR)
 
 platform:
