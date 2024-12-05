@@ -20,3 +20,4 @@ out/
 lr4*/data/*
 *.npz
 __pycache__/
+.vscode/
