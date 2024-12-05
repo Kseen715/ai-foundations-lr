@@ -21,7 +21,7 @@ int stackPointer;
 #define ASSERT_STACK_NOT_FULL \
 	 if (stackPointer == STACK_DEPTH) { error = STACK_VIOLATION ; break; }
 
-#define SPUSH(x) (stack[stackPointer++] = x)
+#define SPUSH(x) do { stack[stackPointer] = x; stackPointer++; } while(0)
 #define SPOP     (stack[--stackPointer])
 #define SPEEK    (stack[stackPointer-1])
 
