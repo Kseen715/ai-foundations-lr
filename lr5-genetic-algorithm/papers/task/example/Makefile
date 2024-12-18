@@ -37,7 +37,7 @@ C_LIBS +=
 else
 RM = rm -rf
 COPY = cp
-SYS_FLAGS = -D  
+SYS_FLAGS =  
 EXE_EXTENSION =
 ARCHIVE_EXTENSION = .a
 OBJECT_EXTENSION = .o
@@ -60,7 +60,11 @@ run: $(EXE_NAME)
 	cd $(BUILD_DIR) && $(EXE_NAME)$(EXE_EXTENSION) && cd ../
 
 build_dir: platform
+ifeq ($(TARGET),windows)
 	@if not exist $(BUILD_DIR) mkdir $(BUILD_DIR)
+else
+	@if [ ! -d $(BUILD_DIR) ]; then mkdir -p $(BUILD_DIR); fi
+endif
 
 platform:
 	$(ECHO) $(SYS_MSG)
